@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useMenu } from '../context/MenuContext';
 import { useCart } from '../context/CartContext';
@@ -10,13 +11,14 @@ import BackButton from '../components/common/BackButton';
 
 interface Props {
   onBack: () => void;
+  onNavigate?: (page: any) => void;
 }
 
-const MenuPage: React.FC<Props> = ({ onBack }) => {
+const MenuPage: React.FC<Props> = ({ onBack, onNavigate }) => {
   const { menuItems, categories } = useMenu();
   const { addToCart } = useCart();
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [activeCategory, setActiveCategory] = useState('All');
   
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
@@ -35,13 +37,24 @@ const MenuPage: React.FC<Props> = ({ onBack }) => {
   };
 
   const openConfig = (food: Food) => {
+    if (!isAuthenticated) {
+      showToast("Access Denied: Please login to start ordering.", "error");
+      return;
+    }
+
     setSelectedFood(food);
     setSize(food.sizeOptions[0]?.name || 'Regular');
     setNotes('');
+    
+    // Initialize modifiers only for non-drinks
     const initialMods: any = {};
-    food.ingredients.forEach(ing => initialMods[ing] = 'Standard');
-    initialMods['Salt'] = 'Standard';
-    initialMods['Spice'] = 'Standard';
+    if (food.category !== 'Drinks') {
+      food.ingredients.forEach(ing => initialMods[ing] = 'Normal');
+      // Add Salt and Spice by default if they are common modifiers, 
+      // or rely purely on admin-defined ingredients.
+      if (!initialMods['Salt']) initialMods['Salt'] = 'Normal';
+      if (!initialMods['Spice']) initialMods['Spice'] = 'Normal';
+    }
     setModifiers(initialMods);
   };
 
@@ -50,14 +63,19 @@ const MenuPage: React.FC<Props> = ({ onBack }) => {
     let total = selectedFood.price;
     const sizeOpt = selectedFood.sizeOptions.find(s => s.name === size);
     if (sizeOpt) total += sizeOpt.priceOffset;
-    Object.keys(modifiers).forEach(ing => {
-      if (modifiers[ing] === 'Extra') total += 25;
-    });
+    
+    // Only calculate modifier costs for non-drinks
+    if (selectedFood.category !== 'Drinks') {
+      Object.keys(modifiers).forEach(ing => {
+        if (modifiers[ing] === 'Extra') total += 25;
+      });
+    }
     return total;
   };
 
   const handleConfirmAdd = () => {
     if (!selectedFood) return;
+    
     if (user?.isAdmin) {
       showToast("Security Breach Avoided: Admin accounts cannot place orders.", "error");
       return;
@@ -72,13 +90,15 @@ const MenuPage: React.FC<Props> = ({ onBack }) => {
       selectedSize: size,
       selectedSauce: '',
       selectedToppings: [],
-      modifiers: modifiers,
+      modifiers: selectedFood.category === 'Drinks' ? {} : modifiers,
       notes: notes
     };
     addToCart(item);
     showToast(`${selectedFood.name} staged to dispatch tray!`, 'success');
     setSelectedFood(null);
   };
+
+  const isDrink = selectedFood?.category === 'Drinks';
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-24 relative page-transition bg-white dark:bg-ino-dark transition-colors duration-300">
@@ -168,32 +188,33 @@ const MenuPage: React.FC<Props> = ({ onBack }) => {
             </div>
           </div>
 
-          <div className="mb-10">
-            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 block mb-6">Modify Components</label>
-            <div className="space-y-3">
-              {Object.keys(modifiers).map(ing => (
-                <div key={ing} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
-                  <span className="text-[10px] font-black uppercase text-gray-700 dark:text-gray-200">{ing}</span>
-                  <div className="flex bg-white dark:bg-gray-700 rounded-xl border border-gray-100 dark:border-gray-600 p-0.5 shadow-sm">
-                    {['Remove', 'Standard', 'Extra'].map(type => (
-                      <button
-                        key={type}
-                        onClick={() => setModifiers(prev => ({ ...prev, [ing]: type }))}
-                        className={`px-3 py-1.5 text-[8px] font-black uppercase rounded-lg transition-all ${
-                          modifiers[ing] === type 
-                          ? 'bg-ino-red text-white shadow-md' 
-                          : 'text-gray-400 hover:text-gray-600 dark:text-gray-500'
-                        }`}
-                      >
-                        {type === 'Standard' ? 'Normal' : type}
-                        {type === 'Remove' && ['Salt', 'Spice'].includes(ing) ? 'No' : ''}
-                      </button>
-                    ))}
+          {!isDrink && Object.keys(modifiers).length > 0 && (
+            <div className="mb-10">
+              <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 block mb-6">Modify Components</label>
+              <div className="space-y-3">
+                {Object.keys(modifiers).map(ing => (
+                  <div key={ing} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                    <span className="text-[10px] font-black uppercase text-gray-700 dark:text-gray-200">{ing}</span>
+                    <div className="flex bg-white dark:bg-gray-700 rounded-xl border border-gray-100 dark:border-gray-600 p-0.5 shadow-sm">
+                      {['Remove', 'Normal', 'Extra'].map(type => (
+                        <button
+                          key={type}
+                          onClick={() => setModifiers(prev => ({ ...prev, [ing]: type }))}
+                          className={`px-4 py-1.5 text-[8px] font-black uppercase rounded-lg transition-all ${
+                            modifiers[ing] === type 
+                            ? 'bg-ino-red text-white shadow-md' 
+                            : 'text-gray-400 hover:text-gray-600 dark:text-gray-500'
+                          }`}
+                        >
+                          {type === 'Remove' && (ing === 'Salt' || ing === 'Spice') ? 'RemoveNo' : type}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="mb-6">
             <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 block mb-4">Transmission Notes</label>

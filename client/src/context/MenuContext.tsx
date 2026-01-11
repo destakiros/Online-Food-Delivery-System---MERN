@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { Food } from '../types';
 
@@ -14,7 +15,11 @@ const MenuContext = createContext<MenuContextType | undefined>(undefined);
 
 const PIZZA_SIZES = [{ name: 'Medium', priceOffset: 0 }, { name: 'Large', priceOffset: 250 }];
 const BURGER_SIZES = [{ name: 'Single', priceOffset: 0 }, { name: 'Double', priceOffset: 120 }];
-const DRINK_SIZES = [{ name: 'Regular', priceOffset: 0 }, { name: 'Jumbo', priceOffset: 35 }];
+const DRINK_SIZES = [
+  { name: 'Small', priceOffset: 0 }, 
+  { name: 'Medium', priceOffset: 15 }, 
+  { name: 'Large', priceOffset: 30 }
+];
 
 export const MenuProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [menuItems, setMenuItems] = useState<Food[]>([
