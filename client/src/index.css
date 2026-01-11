@@ -1,0 +1,23 @@
+/* 
+  Tailwind base, components, and utilities are injected via the 
+  cdn.tailwindcss.com script in the HTML files.
+  Standard CSS below handles initial base styles to avoid IDE diagnostic errors.
+*/
+
+@import './App.css';
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #111827;
+  background-color: #ffffff;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.dark body {
+  background-color: #0D0D0D;
+  color: #F3F4F6;
+}

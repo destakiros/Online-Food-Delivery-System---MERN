@@ -1,0 +1,7 @@
+{
+  "name": "In-N-Out Eats",
+  "description": "A premium student-built MERN food delivery platform with AI integration.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
